@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Try-On Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0f172a; --card:#1e293b; --card2:#263348; --border:#334155;
+  --accent:#6366f1; --cyan:#22d3ee; --text:#f1f5f9; --muted:#94a3b8;
+  --green:#22c55e; --yellow:#eab308; --red:#ef4444; --orange:#f97316;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.5}
+.container{max-width:1500px;margin:0 auto;padding:28px 24px}
+/* header */
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;
+     border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:36px;flex-wrap:wrap;gap:12px}
+.hdr h1{font-size:22px;font-weight:700;display:flex;align-items:center;gap:10px}
+.hdr .meta{font-size:12px;color:var(--muted);margin-top:4px}
+.hdr .cmd{font-size:11px;background:var(--card);border:1px solid var(--border);
+           padding:6px 12px;border-radius:6px;color:var(--muted);font-family:monospace}
+/* section */
+.sec{margin-bottom:52px}
+.sec-hdr{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.sec-hdr h2{font-size:17px;font-weight:600}
+.badge{font-size:11px;padding:3px 10px;border-radius:12px;background:var(--accent);color:#fff;font-weight:500}
+.badge.cyan{background:#0891b2}
+/* card */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:18px}
+.card-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;
+            letter-spacing:.07em;margin-bottom:18px}
+/* funnel */
+.funnel{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);
+        border-radius:10px;overflow:hidden}
+.f-step{background:var(--card);padding:18px 14px;text-align:center;position:relative}
+.f-step:not(:first-child)::before{content:'›';position:absolute;left:-1px;top:50%;
+  transform:translateY(-50%);color:var(--border);font-size:22px;background:var(--bg);
+  padding:4px 2px;line-height:1}
+.f-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+          letter-spacing:.06em;margin-bottom:10px}
+.f-count{font-size:26px;font-weight:800;color:var(--text)}
+.f-users{font-size:12px;color:var(--cyan);margin-top:3px}
+.f-sdp{font-size:10px;color:var(--muted);margin-top:2px}
+.f-cvr{display:inline-block;margin-top:10px;font-size:11px;padding:3px 8px;
+        border-radius:6px;font-weight:600}
+.f-cvr.hi{background:rgba(34,197,94,.15);color:var(--green)}
+.f-cvr.mid{background:rgba(234,179,8,.15);color:var(--yellow)}
+.f-cvr.lo{background:rgba(239,68,68,.15);color:var(--red)}
+/* toggle */
+.toggle-grp{display:flex;gap:6px;margin-bottom:14px}
+.tbtn{background:transparent;border:1px solid var(--border);color:var(--muted);
+       padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;transition:all .15s}
+.tbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+/* table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:rgba(99,102,241,.12);color:var(--muted);font-size:10px;font-weight:700;
+          text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;
+          text-align:center;border-bottom:1px solid var(--border);white-space:nowrap}
+thead th:first-child{text-align:left}
+tbody tr{border-bottom:1px solid rgba(51,65,85,.4)}
+tbody tr:hover{background:rgba(99,102,241,.05)}
+tbody td{padding:9px 12px;text-align:center}
+tbody td:first-child{text-align:left;font-weight:500}
+.n1{font-weight:600}
+.n2{color:var(--cyan);font-size:12px}
+.cvr-tag{display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;font-weight:600}
+.cvr-tag.hi{background:rgba(34,197,94,.12);color:var(--green)}
+.cvr-tag.mid{background:rgba(234,179,8,.12);color:var(--yellow)}
+.cvr-tag.lo{background:rgba(239,68,68,.12);color:var(--red)}
+/* chart */
+.chart-wrap{position:relative;height:280px}
+/* platform pills */
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.pl-mw{background:rgba(99,102,241,.2);color:#818cf8}
+.pl-pwa{background:rgba(34,211,238,.2);color:#22d3ee}
+.pl-app{background:rgba(34,197,94,.2);color:#22c55e}
+.pl-x{background:rgba(148,163,184,.2);color:#94a3b8}
+/* upload type */
+.ut-wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+/* summary cards */
+.sum-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:18px}
+.sum-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.sum-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+            letter-spacing:.06em;margin-bottom:8px}
+.sum-val{font-size:24px;font-weight:800}
+.sum-sub{font-size:11px;color:var(--muted);margin-top:5px}
+hr.div{border:none;border-top:1px solid var(--border);margin:36px 0}
+.empty{color:var(--muted);padding:36px;text-align:center;font-size:13px}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="hdr">
+    <div>
+      <h1>🎭 Try-On Dashboard</h1>
+      <div class="meta">Feature live since: <strong>2026-06-17</strong> &nbsp;|&nbsp; Last updated: <strong>2026-06-20 14:31:08</strong></div>
+    </div>
+    <code class="cmd">python update_dashboard.py</code>
+  </div>
+
+  <!-- ══ SECTION 1 : STYLE TRY-ON ══════════════════════════════════════════ -->
+  <div class="sec">
+    <div class="sec-hdr">
+      <h2>1 · Style Try-on</h2>
+      <span class="badge">Mobile-web &amp; PWA only</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Conversion Funnel — aggregate across all available dates</div>
+      <div class="funnel" id="funnel"></div>
+      <div style="margin-top:12px;font-size:11px;color:var(--muted)">
+        Conversions shown as <strong>count CVR</strong> / <strong>user CVR</strong> from previous step.
+        Counts = total events · Users = distinct user_id · Sess-PDPs = distinct (session_id, page_product_id).
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Daily breakdown with step-to-step conversion</div>
+      <div class="toggle-grp" id="st-tog"></div>
+      <div class="tbl-wrap"><table id="st-tbl"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Upload method — Capture Photo vs Gallery Upload</div>
+      <div class="ut-wrap">
+        <canvas id="ut-chart" width="220" height="220" style="max-width:220px;flex-shrink:0"></canvas>
+        <div class="tbl-wrap" style="flex:1;min-width:300px">
+          <table id="ut-tbl"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <!-- ══ SECTION 2 : MAKEUP TRY-ON ═════════════════════════════════════════ -->
+  <div class="sec">
+    <div class="sec-hdr">
+      <h2>2 · Makeup Try-on (AR)</h2>
+      <span class="badge cyan">Mobile-web, PWA &amp; Application</span>
+    </div>
+
+    <div class="sum-row" id="mk-sum"></div>
+
+    <div class="card">
+      <div class="card-title">CTR by platform (daily)</div>
+      <div class="chart-wrap"><canvas id="mk-chart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Daily breakdown by platform</div>
+      <div class="toggle-grp" id="mk-tog"></div>
+      <div class="tbl-wrap"><table id="mk-tbl"></table></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+/* ─── Embedded data ──────────────────────────────────────────────────────── */
+const D = {"fetched_dates": ["2026-06-17", "2026-06-18", "2026-06-19"], "last_updated": "2026-06-20 14:31:08", "style_tp_view": {"2026-06-17": {"c": 13143, "s": 10462, "u": 2384}, "2026-06-18": {"c": 13211, "s": 10703, "u": 2336}, "2026-06-19": {"c": 14412, "s": 11569, "u": 2624}}, "style_tp_click": {"2026-06-17": {"c": 311, "s": 262, "u": 199}, "2026-06-18": {"c": 313, "s": 269, "u": 205}, "2026-06-19": {"c": 311, "s": 274, "u": 208}}, "style_upload": {"2026-06-17": {"c": 135, "s": 0, "u": 67}, "2026-06-18": {"c": 158, "s": 0, "u": 72}, "2026-06-19": {"c": 178, "s": 0, "u": 76}}, "style_show_result": {"2026-06-17": {"c": 98, "s": 0, "u": 58}, "2026-06-18": {"c": 96, "s": 0, "u": 55}, "2026-06-19": {"c": 113, "s": 0, "u": 71}}, "style_check_result": {"2026-06-17": {"c": 123, "s": 8, "u": 38}, "2026-06-18": {"c": 90, "s": 9, "u": 35}, "2026-06-19": {"c": 147, "s": 22, "u": 47}}, "style_upload_type": {"2026-06-17": {"capture-photo": {"c": 75, "s": 0, "u": 44}, "select-photo-tryon": {"c": 60, "s": 0, "u": 30}}, "2026-06-18": {"capture-photo": {"c": 77, "s": 0, "u": 43}, "select-photo-tryon": {"c": 81, "s": 0, "u": 38}}, "2026-06-19": {"capture-photo": {"c": 83, "s": 0, "u": 47}, "select-photo-tryon": {"c": 95, "s": 0, "u": 36}}}, "makeup_tp_view": {"2026-06-17": {"app_web_view": {"c": 2, "s": 2, "u": 2}, "application": {"c": 4544, "s": 4074, "u": 1428}, "desktop": {"c": 22, "s": 21, "u": 2}, "mobile-web": {"c": 2254, "s": 1716, "u": 305}, "pwa": {"c": 410, "s": 309, "u": 122}}, "2026-06-18": {"app_web_view": {"c": 2, "s": 2, "u": 2}, "application": {"c": 4847, "s": 4371, "u": 1461}, "desktop": {"c": 18, "s": 17, "u": 0}, "mobile-web": {"c": 2571, "s": 1888, "u": 314}, "pwa": {"c": 444, "s": 355, "u": 109}}, "2026-06-19": {"app_web_view": {"c": 1, "s": 1, "u": 1}, "application": {"c": 5319, "s": 4767, "u": 1579}, "desktop": {"c": 4, "s": 4, "u": 0}, "mobile-web": {"c": 2368, "s": 1735, "u": 335}, "pwa": {"c": 497, "s": 362, "u": 117}}}, "makeup_tp_click": {"2026-06-17": {"application": {"c": 116, "s": 100, "u": 52}, "mobile-web": {"c": 14, "s": 13, "u": 8}, "pwa": {"c": 8, "s": 7, "u": 6}}, "2026-06-18": {"application": {"c": 103, "s": 77, "u": 48}, "desktop": {"c": 1, "s": 1, "u": 0}, "mobile-web": {"c": 46, "s": 40, "u": 14}, "pwa": {"c": 4, "s": 4, "u": 3}}, "2026-06-19": {"application": {"c": 122, "s": 101, "u": 59}, "mobile-web": {"c": 35, "s": 30, "u": 11}, "pwa": {"c": 10, "s": 5, "u": 5}}}};
+
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
+const fmt = n => (n == null || n === 0) ? '0' : Number(n).toLocaleString();
+const pct = (n, d) => d > 0 ? (n / d * 100).toFixed(1) + '%' : '—';
+
+function cvrCls(p) {
+  const v = parseFloat(p);
+  if (isNaN(v)) return '';
+  return v >= 40 ? 'hi' : v >= 15 ? 'mid' : 'lo';
+}
+
+function cvrTag(p) {
+  const cls = cvrCls(p);
+  return cls ? `<span class="cvr-tag ${cls}">${p}</span>` : `<span class="cvr-tag">${p}</span>`;
+}
+
+function fCvr(n, d) {
+  const p = pct(n, d);
+  const cls = cvrCls(p);
+  return `<span class="f-cvr ${cls}">${p}</span>`;
+}
+
+function platPill(p) {
+  const low = (p||'').toLowerCase();
+  const cls = low.includes('web') ? 'pl-mw' :
+              low === 'pwa'       ? 'pl-pwa' :
+              (low === 'android' || low === 'ios' || low === 'app') ? 'pl-app' : 'pl-x';
+  return `<span class="pill ${cls}">${p||'—'}</span>`;
+}
+
+/* ─── Step metadata ──────────────────────────────────────────────────────── */
+const STEPS = [
+  {key:'style_tp_view',   label:'TP View'},
+  {key:'style_tp_click',  label:'TP Click'},
+  {key:'style_upload',    label:'Upload Photo'},
+  {key:'style_show_result', label:'Show Result'},
+  {key:'style_check_result', label:'Check Result'},
+];
+
+function agg(key) {
+  let c=0, s=0, u=0;
+  Object.values(D[key]||{}).forEach(v => { c+=v.c; s+=v.s; u+=v.u; });
+  return {c, s, u};
+}
+
+function dayVal(key, ds) { return D[key]?.[ds] || {c:0,s:0,u:0}; }
+
+const allDates = (D.fetched_dates || []).slice().sort();
+
+/* ─── Section 1 · Funnel ─────────────────────────────────────────────────── */
+function renderFunnel() {
+  const totals = STEPS.map(st => ({...st, ...agg(st.key)}));
+  document.getElementById('funnel').innerHTML = totals.map((st, i) => {
+    const prev = i > 0 ? totals[i-1] : null;
+    const cvrHtml = prev
+      ? `<div style="margin-top:10px;font-size:10px;color:var(--muted)">vs prev step</div>
+         ${fCvr(st.c, prev.c)} count<br>${fCvr(st.u, prev.u)} user`
+      : `<div style="margin-top:14px;font-size:11px;color:var(--accent)">▶ Entry point</div>`;
+    return `
+      <div class="f-step">
+        <div class="f-label">${st.label}</div>
+        <div class="f-count">${fmt(st.c)}</div>
+        <div class="f-users">👤 ${fmt(st.u)} users</div>
+        <div class="f-sdp">${fmt(st.s)} sess-pdps</div>
+        ${cvrHtml}
+      </div>`;
+  }).join('');
+}
+
+/* ─── Section 1 · Daily table ────────────────────────────────────────────── */
+let stMode = 'count';
+function renderStToggle() {
+  document.getElementById('st-tog').innerHTML = `
+    <button class="tbtn ${stMode==='count'?'on':''}" onclick="stMode='count';renderStToggle();renderStTable()">By Count</button>
+    <button class="tbtn ${stMode==='users'?'on':''}" onclick="stMode='users';renderStToggle();renderStTable()">By Users</button>
+    <button class="tbtn ${stMode==='sesspdp'?'on':''}" onclick="stMode='sesspdp';renderStToggle();renderStTable()">By Sess-PDPs</button>`;
+}
+
+function renderStTable() {
+  const tbl = document.getElementById('st-tbl');
+  if (!allDates.length) { tbl.innerHTML='<tr><td class="empty">No data fetched yet.</td></tr>'; return; }
+  const f = stMode === 'count' ? 'c' : stMode === 'users' ? 'u' : 's';
+
+  tbl.innerHTML = `
+    <thead><tr>
+      <th>Date</th>
+      <th>TP View</th>
+      <th>TP Click</th><th>CTR</th>
+      <th>Upload</th><th>CVR</th>
+      <th>Show Result</th><th>CVR</th>
+      <th>Check Result</th><th>CVR</th>
+    </tr></thead>
+    <tbody>${[...allDates].reverse().map(ds => {
+      const tv = dayVal('style_tp_view',     ds)[f];
+      const tc = dayVal('style_tp_click',    ds)[f];
+      const up = dayVal('style_upload',      ds)[f];
+      const sr = dayVal('style_show_result', ds)[f];
+      const cr = dayVal('style_check_result',ds)[f];
+      return `<tr>
+        <td>${ds}</td>
+        <td class="n1">${fmt(tv)}</td>
+        <td class="n1">${fmt(tc)}</td><td>${cvrTag(pct(tc,tv))}</td>
+        <td class="n1">${fmt(up)}</td><td>${cvrTag(pct(up,tc))}</td>
+        <td class="n1">${fmt(sr)}</td><td>${cvrTag(pct(sr,up))}</td>
+        <td class="n1">${fmt(cr)}</td><td>${cvrTag(pct(cr,sr))}</td>
+      </tr>`;
+    }).join('')}</tbody>`;
+}
+
+/* ─── Section 1 · Upload type ────────────────────────────────────────────── */
+function renderUploadType() {
+  let cap_c=0, cap_u=0, gal_c=0, gal_u=0;
+  const dates = Object.keys(D.style_upload_type||{}).sort();
+  dates.forEach(ds => {
+    const day = D.style_upload_type[ds]||{};
+    cap_c += day['capture-photo']?.c||0;
+    cap_u += day['capture-photo']?.u||0;
+    gal_c += day['select-photo-tryon']?.c||0;
+    gal_u += day['select-photo-tryon']?.u||0;
+  });
+
+  /* doughnut */
+  const ctx = document.getElementById('ut-chart').getContext('2d');
+  if (cap_c + gal_c > 0) {
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['📷 Capture Photo', '🖼 Gallery Upload'],
+        datasets: [{ data: [cap_c, gal_c], backgroundColor: ['#6366f1','#22d3ee'], borderWidth:0 }]
+      },
+      options: {
+        responsive:false,
+        plugins: {
+          legend: { labels: { color:'#94a3b8', font:{size:12} } },
+          tooltip: { callbacks: { label: c => ` ${fmt(c.raw)}  (${pct(c.raw, cap_c+gal_c)})` } }
+        }
+      }
+    });
+  } else {
+    ctx.canvas.parentElement.innerHTML = '<div class="empty">No upload-type data yet.</div>';
+  }
+
+  /* table */
+  const tbl = document.getElementById('ut-tbl');
+  if (!dates.length) { tbl.innerHTML='<tr><td class="empty">No data.</td></tr>'; return; }
+  tbl.innerHTML = `
+    <thead><tr>
+      <th>Date</th>
+      <th>Capture (count)</th><th>Capture (users)</th>
+      <th>Gallery (count)</th><th>Gallery (users)</th>
+      <th>Capture %</th><th>Gallery %</th>
+    </tr></thead>
+    <tbody>${[...dates].reverse().map(ds => {
+      const day = D.style_upload_type[ds]||{};
+      const cc = day['capture-photo']?.c||0,  cu = day['capture-photo']?.u||0;
+      const gc = day['select-photo-tryon']?.c||0, gu = day['select-photo-tryon']?.u||0;
+      const tot = cc+gc;
+      return `<tr>
+        <td>${ds}</td>
+        <td class="n1">${fmt(cc)}</td><td class="n2">${fmt(cu)}</td>
+        <td class="n1">${fmt(gc)}</td><td class="n2">${fmt(gu)}</td>
+        <td>${cvrTag(pct(cc,tot))}</td>
+        <td>${cvrTag(pct(gc,tot))}</td>
+      </tr>`;
+    }).join('')}</tbody>`;
+}
+
+/* ─── Section 2 · Makeup summary cards ──────────────────────────────────── */
+const MK_EXCLUDE = new Set(['desktop', 'app_web_view']);
+function renderMkSummary() {
+  const byPlat = {};
+  ['makeup_tp_view','makeup_tp_click'].forEach(k => {
+    Object.values(D[k]||{}).forEach(dayObj => {
+      Object.entries(dayObj).forEach(([p, v]) => {
+        if (MK_EXCLUDE.has(p)) return;
+        byPlat[p] = byPlat[p] || {vc:0,vu:0,vs:0,cc:0,cu:0,cs:0};
+        if (k==='makeup_tp_view')  { byPlat[p].vc+=v.c; byPlat[p].vu+=v.u; byPlat[p].vs+=v.s; }
+        else                       { byPlat[p].cc+=v.c; byPlat[p].cu+=v.u; byPlat[p].cs+=v.s; }
+      });
+    });
+  });
+
+  const el = document.getElementById('mk-sum');
+  const entries = Object.entries(byPlat);
+  if (!entries.length) { el.innerHTML='<div class="empty">No data yet.</div>'; return; }
+
+  /* all-platforms total */
+  let tv=0,tu=0,tc=0,tcu=0;
+  entries.forEach(([,v])=>{ tv+=v.vc; tu+=v.vu; tc+=v.cc; tcu+=v.cu; });
+
+  el.innerHTML = [
+    ['All Platforms', tv, tu, tc, tcu],
+    ...entries.map(([p,v]) => [p, v.vc, v.vu, v.cc, v.cu])
+  ].map(([label, vc, vu, cc, cu]) => `
+    <div class="sum-card">
+      <div class="sum-label">${typeof label === 'string' && label !== 'All Platforms' ? platPill(label) : label}</div>
+      <div class="sum-val" style="color:var(--accent)">${pct(cc,vc)}</div>
+      <div class="sum-sub">CTR (by count)</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">
+        User CTR: ${pct(cu,vu)}<br>
+        Views: ${fmt(vc)} · Clicks: ${fmt(cc)}
+      </div>
+    </div>`).join('');
+}
+
+/* ─── Section 2 · CTR line chart ─────────────────────────────────────────── */
+function renderMkChart() {
+  const datesSet = new Set([
+    ...Object.keys(D.makeup_tp_view||{}),
+    ...Object.keys(D.makeup_tp_click||{})
+  ]);
+  const dates = [...datesSet].sort();
+  if (!dates.length) return;
+
+  const platforms = new Set();
+  Object.values(D.makeup_tp_view||{}).forEach(d => Object.keys(d).forEach(p => {
+    if (!MK_EXCLUDE.has(p)) platforms.add(p);
+  }));
+
+  const COLORS = ['#6366f1','#22d3ee','#22c55e','#f59e0b','#f43f5e','#a855f7'];
+  const datasets = [...platforms].map((p, i) => ({
+    label: p,
+    data: dates.map(ds => {
+      const vc = D.makeup_tp_view?.[ds]?.[p]?.c || 0;
+      const cc = D.makeup_tp_click?.[ds]?.[p]?.c || 0;
+      return vc > 0 ? +(cc / vc * 100).toFixed(2) : null;
+    }),
+    borderColor: COLORS[i % COLORS.length],
+    backgroundColor: COLORS[i % COLORS.length] + '22',
+    tension: 0.3, fill: false, pointRadius: 5, pointHoverRadius: 7,
+  }));
+
+  new Chart(document.getElementById('mk-chart').getContext('2d'), {
+    type: 'line',
+    data: { labels: dates, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { ticks:{color:'#94a3b8'}, grid:{color:'#1e293b'} },
+        y: {
+          ticks: { color:'#94a3b8', callback: v => v+'%' },
+          grid:  { color:'#334155' },
+          title: { display:true, text:'CTR %', color:'#94a3b8' }
+        }
+      },
+      plugins: {
+        legend: { labels:{color:'#f1f5f9',font:{size:12}} },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.raw ?? '—'}%` } }
+      }
+    }
+  });
+}
+
+/* ─── Section 2 · Daily table ────────────────────────────────────────────── */
+let mkMode = 'count';
+function renderMkToggle() {
+  document.getElementById('mk-tog').innerHTML = `
+    <button class="tbtn ${mkMode==='count'?'on':''}"   onclick="mkMode='count';renderMkToggle();renderMkTable()">By Count</button>
+    <button class="tbtn ${mkMode==='users'?'on':''}"   onclick="mkMode='users';renderMkToggle();renderMkTable()">By Users</button>
+    <button class="tbtn ${mkMode==='sesspdp'?'on':''}" onclick="mkMode='sesspdp';renderMkToggle();renderMkTable()">By Sess-PDPs</button>`;
+}
+
+function renderMkTable() {
+  const tbl = document.getElementById('mk-tbl');
+  const f = mkMode === 'count' ? 'c' : mkMode === 'users' ? 'u' : 's';
+
+  const datesSet = new Set([
+    ...Object.keys(D.makeup_tp_view||{}),
+    ...Object.keys(D.makeup_tp_click||{})
+  ]);
+  const dates = [...datesSet].sort().reverse();
+
+  if (!dates.length) { tbl.innerHTML='<tr><td class="empty" colspan="6">No data yet.</td></tr>'; return; }
+
+  const rows = dates.flatMap(ds => {
+    const allPlats = new Set([
+      ...Object.keys(D.makeup_tp_view?.[ds]||{}),
+      ...Object.keys(D.makeup_tp_click?.[ds]||{})
+    ].filter(p => !MK_EXCLUDE.has(p)));
+    return [...allPlats].map(p => {
+      const v = D.makeup_tp_view?.[ds]?.[p]?.[f]  || 0;
+      const c = D.makeup_tp_click?.[ds]?.[p]?.[f] || 0;
+      const ctr = pct(c, v);
+      return `<tr>
+        <td>${ds}</td>
+        <td>${platPill(p)}</td>
+        <td class="n1">${fmt(v)}</td>
+        <td class="n1">${fmt(c)}</td>
+        <td>${cvrTag(ctr)}</td>
+      </tr>`;
+    });
+  }).join('');
+
+  tbl.innerHTML = `
+    <thead><tr>
+      <th>Date</th><th>Platform</th>
+      <th>TP Views</th><th>TP Clicks</th><th>CTR</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+
+/* ─── Boot ───────────────────────────────────────────────────────────────── */
+renderFunnel();
+renderStToggle();
+renderStTable();
+renderUploadType();
+renderMkSummary();
+renderMkChart();
+renderMkToggle();
+renderMkTable();
+</script>
+</body>
+</html>
